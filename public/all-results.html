@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Peer Review Results</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>All Results</h1>
+    <p class="muted">Aggregated anonymously across every employee. Comments are shown in random order and are not attributed to any respondent.</p>
+
+    <div id="loading" class="card">Loading results…</div>
+    <div id="error" class="card banner error hidden"></div>
+    <div id="app"></div>
+  </div>
+
+  <script>
+    const adminToken = new URLSearchParams(location.search).get("admin_token") || "";
+    const headers = adminToken ? { "X-Admin-Token": adminToken } : {};
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    (async () => {
+      const r = await fetch("/api/admin/all-results", { headers });
+      const data = await r.json();
+      if (!r.ok) {
+        document.getElementById("loading").classList.add("hidden");
+        const err = document.getElementById("error");
+        err.classList.remove("hidden");
+        err.textContent = data.error || "Could not load results. If admin protection is enabled, append ?admin_token=YOUR_TOKEN to this URL.";
+        return;
+      }
+
+      const app = document.getElementById("app");
+      if (!data.employees.length) {
+        app.innerHTML = '<div class="card">No employees yet.</div>';
+      } else {
+        for (const emp of data.employees) {
+          const card = document.createElement("div");
+          card.className = "card";
+          let html = `<h2 style="margin-top:0;">${escapeHtml(emp.name)}</h2>`;
+          html += `<div class="results-grid">
+            <div class="hdr">Core Value</div>
+            <div class="hdr" style="text-align:right;">-</div>
+            <div class="hdr" style="text-align:right;">+/-</div>
+            <div class="hdr" style="text-align:right;">+</div>`;
+          for (const row of emp.ratingsByValue) {
+            html += `<div class="value-name">${escapeHtml(row.value)}</div>
+              <div class="count minus">${row["-"]}</div>
+              <div class="count mid">${row["+/-"]}</div>
+              <div class="count plus">${row["+"]}</div>`;
+          }
+          html += `</div>`;
+          html += `<h3 style="margin:16px 0 8px;">General comments</h3>`;
+          if (!emp.comments.length) {
+            html += `<p class="muted">No comments.</p>`;
+          } else {
+            for (const c of emp.comments) {
+              html += `<div class="comment"></div>`;
+            }
+          }
+          card.innerHTML = html;
+          // Inject comment text safely (textContent) so HTML in comments isn't rendered.
+          const slots = card.querySelectorAll(".comment");
+          emp.comments.forEach((c, i) => { if (slots[i]) slots[i].textContent = c; });
+          app.appendChild(card);
+        }
+      }
+
+      document.getElementById("loading").classList.add("hidden");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Peer Review Results</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="card">Loading results…</div>
+    <div id="error" class="card banner error hidden"></div>
+
+    <div id="app" class="hidden">
+      <h1 id="title"></h1>
+      <p class="muted">Aggregated anonymously. Comments are shown in random order and are not attributed to any respondent.</p>
+
+      <div class="card">
+        <h2 style="margin-top:0;">Ratings by core value</h2>
+        <div id="ratings" class="results-grid">
+          <div class="hdr">Core Value</div>
+          <div class="hdr" style="text-align:right;">-</div>
+          <div class="hdr" style="text-align:right;">+/-</div>
+          <div class="hdr" style="text-align:right;">+</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0;">General comments</h2>
+        <div id="comments"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = location.pathname.split("/").pop();
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    (async () => {
+      const r = await fetch(`/api/results/${token}`);
+      const data = await r.json();
+      if (!r.ok) {
+        document.getElementById("loading").classList.add("hidden");
+        const err = document.getElementById("error");
+        err.classList.remove("hidden");
+        err.textContent = data.error || "Could not load results.";
+        return;
+      }
+
+      document.getElementById("title").textContent = `Results for ${data.name}`;
+
+      const ratingsEl = document.getElementById("ratings");
+      for (const row of data.ratingsByValue) {
+        const cells = [
+          `<div class="value-name">${escapeHtml(row.value)}</div>`,
+          `<div class="count minus">${row["-"]}</div>`,
+          `<div class="count mid">${row["+/-"]}</div>`,
+          `<div class="count plus">${row["+"]}</div>`,
+        ];
+        ratingsEl.insertAdjacentHTML("beforeend", cells.join(""));
+      }
+
+      const commentsEl = document.getElementById("comments");
+      if (!data.comments.length) {
+        commentsEl.innerHTML = `<p class="muted">No comments were left for you.</p>`;
+      } else {
+        for (const c of data.comments) {
+          const div = document.createElement("div");
+          div.className = "comment";
+          div.textContent = c;
+          commentsEl.appendChild(div);
+        }
+      }
+
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peer Review — Setup</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Peer Review — Admin Setup</h1>
+    <p class="muted">Create the employee roster and core values, then share the generated links.</p>
+
+    <div id="existingBanner" class="banner info hidden"></div>
+
+    <div class="card">
+      <h2>1. Employees</h2>
+      <p class="muted">One per line, format: <code>Name, email@example.com</code></p>
+      <textarea id="employees" rows="8" placeholder="Jane Doe, jane@example.com
+John Smith, john@example.com"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>2. Core values</h2>
+      <p class="muted">One per line.</p>
+      <textarea id="values" rows="6" placeholder="Integrity
+Ownership
+Customer Focus
+Excellence"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label style="margin:0;">
+          <input type="checkbox" id="reset" /> Reset existing data before creating
+        </label>
+        <div class="spacer"></div>
+        <button id="generateBtn" class="primary">Generate links</button>
+      </div>
+      <p class="muted" style="margin-top:10px;">Reset wipes all employees, ratings, and comments. Use when starting a new review cycle.</p>
+    </div>
+
+    <div id="result" class="card hidden">
+      <h2>Employee links</h2>
+      <p class="muted">Send each person their <strong>Survey link</strong> now. Share the <strong>Results link</strong> after the cycle ends.</p>
+      <table class="links-table" id="linksTable">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Status</th><th>Survey link</th><th>Results link</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:12px;">
+        <button id="copyAllBtn">Copy all as CSV</button>
+        <button id="refreshBtn">Refresh status</button>
+        <a id="allResultsLink" href="#" target="_blank" rel="noopener"><button type="button" class="primary">View all results</button></a>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Anonymity: the backend never stores who submitted which rating. Survey tokens are used only to enforce one-submission-per-person, then ratings and comments are written with no link back to the respondent.
+    </p>
+  </div>
+
+  <script>
+    const adminToken = new URLSearchParams(location.search).get("admin_token") || "";
+    const authHeaders = adminToken ? { "X-Admin-Token": adminToken } : {};
+
+    function parseEmployees(text) {
+      return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+        const parts = line.split(",").map(s => s.trim());
+        if (parts.length < 2) return null;
+        const name = parts[0];
+        const email = parts.slice(1).join(",").trim();
+        return name && email ? { name, email } : null;
+      }).filter(Boolean);
+    }
+
+    function parseValues(text) {
+      return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    }
+
+    async function loadExisting() {
+      try {
+        const r = await fetch("/api/admin/links", { headers: authHeaders });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (data.employees && data.employees.length) {
+          document.getElementById("existingBanner").classList.remove("hidden");
+          document.getElementById("existingBanner").textContent =
+            `Existing setup found: ${data.employees.length} employees. Filling in a new roster + checking Reset will replace it.`;
+          renderLinks(data.employees);
+        }
+      } catch (_) {}
+    }
+
+    function renderLinks(employees) {
+      const result = document.getElementById("result");
+      result.classList.remove("hidden");
+      const tbody = document.querySelector("#linksTable tbody");
+      tbody.innerHTML = "";
+      for (const e of employees) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(e.name)}</td>
+          <td>${escapeHtml(e.email)}</td>
+          <td>${e.submitted ? "✅ Submitted" : "⏳ Pending"}</td>
+          <td>
+            <code>${escapeHtml(e.surveyLink)}</code>
+            <button class="copy-btn" data-copy="${encodeURIComponent(e.surveyLink)}">Copy</button>
+          </td>
+          <td>
+            <code>${escapeHtml(e.resultsLink)}</code>
+            <button class="copy-btn" data-copy="${encodeURIComponent(e.resultsLink)}">Copy</button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+      tbody.querySelectorAll(".copy-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          navigator.clipboard.writeText(decodeURIComponent(btn.dataset.copy));
+          const orig = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = orig, 1000);
+        });
+      });
+      // Save latest for CSV export
+      window._lastEmployees = employees;
+
+      // Update the All Results link to include the admin token if present
+      const allLink = document.getElementById("allResultsLink");
+      if (allLink) {
+        const base = `${location.origin}/all-results`;
+        allLink.href = adminToken ? `${base}?admin_token=${encodeURIComponent(adminToken)}` : base;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+      const employees = parseEmployees(document.getElementById("employees").value);
+      const coreValues = parseValues(document.getElementById("values").value);
+      const reset = document.getElementById("reset").checked;
+
+      if (employees.length < 2) return alert("Enter at least 2 employees (Name, email per line).");
+      if (coreValues.length < 1) return alert("Enter at least one core value.");
+
+      const r = await fetch("/api/admin/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ employees, coreValues, reset }),
+      });
+      const data = await r.json();
+      if (!r.ok) return alert(data.error || "Setup failed");
+      renderLinks(data.employees);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    });
+
+    document.getElementById("refreshBtn")?.addEventListener?.("click", loadExisting);
+    document.getElementById("copyAllBtn")?.addEventListener?.("click", () => {
+      const rows = window._lastEmployees || [];
+      const csv = ["Name,Email,Status,Survey Link,Results Link"].concat(
+        rows.map(e => `"${e.name.replace(/"/g,'""')}","${e.email}","${e.submitted ? "Submitted" : "Pending"}","${e.surveyLink}","${e.resultsLink}"`)
+      ).join("\n");
+      navigator.clipboard.writeText(csv);
+      alert("CSV copied to clipboard.");
+    });
+
+    loadExisting();
+  </script>
+</body>
+</html>

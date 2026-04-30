@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peer Review Survey</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="card">Loading survey…</div>
+
+    <div id="app" class="hidden">
+      <h1>Peer Review</h1>
+      <p id="hello" class="muted"></p>
+
+      <div class="banner info">
+        Your responses are anonymous. We never store who submitted which rating. Rate each peer on each core value using <strong>-</strong>, <strong>+/-</strong>, or <strong>+</strong>, or mark them as someone you don't work with enough to rate.
+      </div>
+
+      <div id="employees"></div>
+
+      <div class="card">
+        <button id="submitBtn" class="primary">Submit survey</button>
+        <span id="submitNote" class="muted" style="margin-left:12px;"></span>
+      </div>
+    </div>
+
+    <div id="done" class="card hidden">
+      <h1>Thank you</h1>
+      <p>Your responses have been recorded anonymously. You can close this window.</p>
+    </div>
+
+    <div id="error" class="card banner error hidden"></div>
+  </div>
+
+  <script>
+    const token = location.pathname.split("/").pop();
+    const state = {
+      coreValues: [],
+      employees: [],
+      // ratings[empId][valueId] = "+" | "+/-" | "-"
+      ratings: {},
+      comments: {},
+      skipped: {},    // empId -> bool
+    };
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    async function load() {
+      const r = await fetch(`/api/survey/${token}`);
+      const data = await r.json();
+      if (!r.ok) {
+        document.getElementById("loading").classList.add("hidden");
+        const err = document.getElementById("error");
+        err.classList.remove("hidden");
+        err.textContent = data.error || "Could not load survey.";
+        return;
+      }
+      state.employees = data.employees;
+      state.coreValues = data.coreValues;
+      document.getElementById("hello").textContent = `Welcome, ${data.respondentName}. Please rate each peer on each core value.`;
+      render();
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+    }
+
+    function render() {
+      const wrap = document.getElementById("employees");
+      wrap.innerHTML = "";
+      for (const emp of state.employees) {
+        state.ratings[emp.id] = state.ratings[emp.id] || {};
+        const section = document.createElement("div");
+        section.className = "employee";
+        section.dataset.empId = emp.id;
+
+        const valuesHtml = state.coreValues.map(v => `
+          <div class="value-row" data-value-id="${v.id}">
+            <div class="value-name">${escapeHtml(v.name)}</div>
+            <div class="rating-group" role="group" aria-label="Rating for ${escapeHtml(v.name)}">
+              <button type="button" data-rating="-" class="minus">-</button>
+              <button type="button" data-rating="+/-" class="mid">+/-</button>
+              <button type="button" data-rating="+" class="plus">+</button>
+            </div>
+          </div>
+        `).join("");
+
+        section.innerHTML = `
+          <div class="employee-header">
+            <span class="caret">▾</span>
+            <div class="name-block">
+              <h3>${escapeHtml(emp.name)}</h3>
+              <button type="button" class="skip-btn ghost">I don't work with this person enough to rate</button>
+            </div>
+            <div class="spacer"></div>
+            <span class="status muted" style="font-size:13px;"></span>
+          </div>
+          <div class="employee-body">
+            <div class="ratings-block">
+              ${valuesHtml}
+              <div style="margin-top:14px;">
+                <label for="comment-${emp.id}">General comments</label>
+                <textarea id="comment-${emp.id}" rows="3" placeholder="Optional — any feedback for this person"></textarea>
+              </div>
+            </div>
+          </div>
+        `;
+        wrap.appendChild(section);
+
+        // Wire up rating buttons
+        section.querySelectorAll(".value-row").forEach(row => {
+          const valueId = Number(row.dataset.valueId);
+          row.querySelectorAll("button").forEach(btn => {
+            btn.addEventListener("click", () => {
+              row.querySelectorAll("button").forEach(b => b.classList.remove("selected"));
+              btn.classList.add("selected");
+              state.ratings[emp.id][valueId] = btn.dataset.rating;
+              updateStatus(section, emp);
+            });
+          });
+        });
+
+        // Collapsible header (clicking the header toggles, but ignore clicks on buttons within header)
+        section.querySelector(".employee-header").addEventListener("click", (e) => {
+          if (e.target.closest("button")) return;
+          section.classList.toggle("collapsed");
+        });
+
+        // Skip / Expand button
+        const skipBtn = section.querySelector(".skip-btn");
+        skipBtn.addEventListener("click", () => {
+          const block = section.querySelector(".ratings-block");
+          const skipped = !block.classList.contains("hidden");
+          if (skipped) {
+            block.classList.add("hidden");
+            skipBtn.textContent = "Expand";
+            state.skipped[emp.id] = true;
+            // Clear any prior ratings & comments from this ratee so they are NOT submitted.
+            state.ratings[emp.id] = {};
+            state.comments[emp.id] = "";
+            section.querySelectorAll(".rating-group button.selected").forEach(b => b.classList.remove("selected"));
+            const ta = section.querySelector(`#comment-${emp.id}`);
+            if (ta) ta.value = "";
+          } else {
+            block.classList.remove("hidden");
+            skipBtn.textContent = "I don't work with this person enough to rate";
+            state.skipped[emp.id] = false;
+          }
+          updateStatus(section, emp);
+        });
+
+        // Comments
+        section.querySelector(`#comment-${emp.id}`).addEventListener("input", (e) => {
+          state.comments[emp.id] = e.target.value;
+        });
+      }
+    }
+
+    function updateStatus(section, emp) {
+      const status = section.querySelector(".status");
+      if (state.skipped[emp.id]) {
+        status.textContent = "Skipped";
+        return;
+      }
+      const total = state.coreValues.length;
+      const done = Object.keys(state.ratings[emp.id] || {}).length;
+      status.textContent = done === 0 ? "" : `${done}/${total} rated`;
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+      // Build payload
+      const ratings = [];
+      const comments = [];
+      const unfinished = [];
+
+      for (const emp of state.employees) {
+        if (state.skipped[emp.id]) continue;
+        const empRatings = state.ratings[emp.id] || {};
+        const done = Object.keys(empRatings).length;
+        if (done > 0 && done < state.coreValues.length) {
+          unfinished.push(emp.name);
+        }
+        for (const v of state.coreValues) {
+          if (empRatings[v.id]) {
+            ratings.push({ rateeId: emp.id, valueId: v.id, rating: empRatings[v.id] });
+          }
+        }
+        const c = (state.comments[emp.id] || "").trim();
+        if (c) comments.push({ rateeId: emp.id, comment: c });
+      }
+
+      if (unfinished.length) {
+        if (!confirm(`You left some core values unrated for: ${unfinished.join(", ")}.\n\nSubmit anyway? (Unrated items won't be counted.)`)) return;
+      }
+
+      // Anyone with zero ratings and not marked skipped? Warn once.
+      const untouched = state.employees.filter(e => !state.skipped[e.id] && Object.keys(state.ratings[e.id] || {}).length === 0);
+      if (untouched.length) {
+        if (!confirm(`These peers have no ratings or skip marks: ${untouched.map(e => e.name).join(", ")}.\n\nSubmit anyway?`)) return;
+      }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = "Submitting…";
+
+      const r = await fetch(`/api/survey/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ratings, comments }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        btn.disabled = false;
+        btn.textContent = "Submit survey";
+        alert(data.error || "Submission failed.");
+        return;
+      }
+      document.getElementById("app").classList.add("hidden");
+      document.getElementById("done").classList.remove("hidden");
+    });
+
+    load();
+  </script>
+</body>
+</html>
