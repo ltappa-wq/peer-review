@@ -1,0 +1,227 @@
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "Don Weber",
+      "email": "dweber@newresources.com",
+      "surveyToken": "wAvSa5vcV-m_qZAyHVYaKMGw7gMeF2wO",
+      "resultsToken": "zYt3fmP22kikKiIPnalk8y66j05v1LZE",
+      "submitted": false
+    },
+    {
+      "id": 2,
+      "name": "Lorne Tappa",
+      "email": "ltappa@gonrc.com",
+      "surveyToken": "9zZzorzQGvwnmsPpGPMHRJtXWrPsJ9Ra",
+      "resultsToken": "hvTrNvzs_MxcHs_5-KQbeC1w3ek1DvMo",
+      "submitted": true
+    },
+    {
+      "id": 3,
+      "name": "Jon Drosdick",
+      "email": "jdrosdick@newresources.com",
+      "surveyToken": "G556V0kjiE3uIWdl-4px4VLnB5sB9xkX",
+      "resultsToken": "ibaI06LkDEigHEQDG-Iikf_bO5Hp-oP3",
+      "submitted": false
+    },
+    {
+      "id": 4,
+      "name": "Mark Grosskopf",
+      "email": "mgrosskopf@gonrc.com",
+      "surveyToken": "f9rlHEhjhyugOptHWmJ5rnL3MwCFbouN",
+      "resultsToken": "4BG-hOZsU92D3Hw3kjwyIhKjrdb2bf-H",
+      "submitted": false
+    },
+    {
+      "id": 5,
+      "name": "Chris Downs",
+      "email": "cdowns@gonrc.com",
+      "surveyToken": "zNGUdzsTJJ1HdfQ0hRI3-6pPDZMKoc4T",
+      "resultsToken": "WyEHqQnwZrxpalTHElzshpGBRe4HykH6",
+      "submitted": false
+    },
+    {
+      "id": 6,
+      "name": "Jessica Harris",
+      "email": "jharris@newresources.com",
+      "surveyToken": "TvqgjLxN9yqV0haYjVSJ51uH_dmG72E9",
+      "resultsToken": "CAw95FF3xLuQQJsPEU7XNS_YfS_ril0m",
+      "submitted": false
+    }
+  ],
+  "coreValues": [
+    {
+      "id": 1,
+      "name": "Accountable"
+    },
+    {
+      "id": 2,
+      "name": "Passionate"
+    },
+    {
+      "id": 3,
+      "name": "Respectful"
+    },
+    {
+      "id": 4,
+      "name": "Innovative"
+    },
+    {
+      "id": 5,
+      "name": "Collaborative"
+    }
+  ],
+  "ratings": [
+    {
+      "rateeId": 5,
+      "valueId": 1,
+      "rating": "+"
+    },
+    {
+      "rateeId": 5,
+      "valueId": 2,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 5,
+      "valueId": 3,
+      "rating": "-"
+    },
+    {
+      "rateeId": 5,
+      "valueId": 4,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 5,
+      "valueId": 5,
+      "rating": "+"
+    },
+    {
+      "rateeId": 1,
+      "valueId": 1,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 1,
+      "valueId": 2,
+      "rating": "+"
+    },
+    {
+      "rateeId": 1,
+      "valueId": 3,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 1,
+      "valueId": 4,
+      "rating": "-"
+    },
+    {
+      "rateeId": 1,
+      "valueId": 5,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 6,
+      "valueId": 1,
+      "rating": "+"
+    },
+    {
+      "rateeId": 6,
+      "valueId": 2,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 6,
+      "valueId": 3,
+      "rating": "-"
+    },
+    {
+      "rateeId": 6,
+      "valueId": 4,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 6,
+      "valueId": 5,
+      "rating": "+"
+    },
+    {
+      "rateeId": 3,
+      "valueId": 1,
+      "rating": "+"
+    },
+    {
+      "rateeId": 3,
+      "valueId": 2,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 3,
+      "valueId": 3,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 3,
+      "valueId": 4,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 3,
+      "valueId": 5,
+      "rating": "+"
+    },
+    {
+      "rateeId": 4,
+      "valueId": 1,
+      "rating": "+"
+    },
+    {
+      "rateeId": 4,
+      "valueId": 2,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 4,
+      "valueId": 3,
+      "rating": "+"
+    },
+    {
+      "rateeId": 4,
+      "valueId": 4,
+      "rating": "+/-"
+    },
+    {
+      "rateeId": 4,
+      "valueId": 5,
+      "rating": "+/-"
+    }
+  ],
+  "comments": [
+    {
+      "rateeId": 5,
+      "comment": "testing downs"
+    },
+    {
+      "rateeId": 1,
+      "comment": "testing weber"
+    },
+    {
+      "rateeId": 6,
+      "comment": "testing harris"
+    },
+    {
+      "rateeId": 3,
+      "comment": "testing drosdick"
+    },
+    {
+      "rateeId": 4,
+      "comment": "testing grosskopf"
+    }
+  ],
+  "seq": {
+    "employee": 6,
+    "value": 5
+  }
+}
