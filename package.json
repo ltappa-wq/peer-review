@@ -1,0 +1,13 @@
+{
+  "name": "peer-review",
+  "version": "1.0.1",
+  "description": "Anonymous peer review survey app with per-employee survey and results links.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
